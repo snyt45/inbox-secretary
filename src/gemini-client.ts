@@ -33,4 +33,33 @@ export class GeminiClient {
     const data: GeminiResponse = await response.json();
     return data.candidates[0].content.parts[0].text;
   }
+
+  async generateStructured<T>(
+    systemInstruction: string,
+    prompt: string,
+    schema: Record<string, unknown>
+  ): Promise<T> {
+    const url = `${this.baseUrl}/${this.model}:generateContent?key=${this.apiKey}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemInstruction }] },
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: schema,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Gemini API error: ${response.status} ${error}`);
+    }
+
+    const data: GeminiResponse = await response.json();
+    return JSON.parse(data.candidates[0].content.parts[0].text) as T;
+  }
 }
