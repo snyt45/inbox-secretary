@@ -1,0 +1,115 @@
+import { App, PluginSettingTab, Setting } from "obsidian";
+import type InboxSecretaryPlugin from "./main";
+
+export interface InboxSecretarySettings {
+  inboxFolder: string;
+  dailyNoteFolder: string;
+  digestOutputFolder: string;
+  geminiApiKey: string;
+  cleanupMode: "delete" | "archive" | "keep";
+  archiveFolder: string;
+}
+
+export const DEFAULT_SETTINGS: InboxSecretarySettings = {
+  inboxFolder: "Inbox",
+  dailyNoteFolder: "Journal/2026/Daily",
+  digestOutputFolder: "Inbox",
+  geminiApiKey: "",
+  cleanupMode: "delete",
+  archiveFolder: "Archive",
+};
+
+export class InboxSecretarySettingTab extends PluginSettingTab {
+  plugin: InboxSecretaryPlugin;
+
+  constructor(app: App, plugin: InboxSecretaryPlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+
+  display(): void {
+    const { containerEl } = this;
+    containerEl.empty();
+
+    new Setting(containerEl)
+      .setName("Inboxフォルダ")
+      .setDesc("未処理ノートが入っているフォルダ")
+      .addText((text) =>
+        text
+          .setPlaceholder("Inbox")
+          .setValue(this.plugin.settings.inboxFolder)
+          .onChange(async (value) => {
+            this.plugin.settings.inboxFolder = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Daily Noteフォルダ")
+      .setDesc("今日の関心事を把握するために参照する")
+      .addText((text) =>
+        text
+          .setPlaceholder("Journal/2026/Daily")
+          .setValue(this.plugin.settings.dailyNoteFolder)
+          .onChange(async (value) => {
+            this.plugin.settings.dailyNoteFolder = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("ダイジェスト出力先")
+      .setDesc("生成されたダイジェストの保存先")
+      .addText((text) =>
+        text
+          .setPlaceholder("Inbox")
+          .setValue(this.plugin.settings.digestOutputFolder)
+          .onChange(async (value) => {
+            this.plugin.settings.digestOutputFolder = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Gemini APIキー")
+      .setDesc("Google AI StudioでAPIキーを取得")
+      .addText((text) =>
+        text
+          .setPlaceholder("AIza...")
+          .setValue(this.plugin.settings.geminiApiKey)
+          .onChange(async (value) => {
+            this.plugin.settings.geminiApiKey = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("消化済みアイテムの処理")
+      .setDesc("ダイジェスト生成後の元ノートの扱い")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("delete", "削除")
+          .addOption("archive", "Archiveに移動")
+          .addOption("keep", "そのまま残す")
+          .setValue(this.plugin.settings.cleanupMode)
+          .onChange(async (value) => {
+            this.plugin.settings.cleanupMode =
+              value as InboxSecretarySettings["cleanupMode"];
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Archiveフォルダ")
+      .setDesc("Archive移動時の保存先")
+      .addText((text) =>
+        text
+          .setPlaceholder("Archive")
+          .setValue(this.plugin.settings.archiveFolder)
+          .onChange(async (value) => {
+            this.plugin.settings.archiveFolder = value;
+            await this.plugin.saveSettings();
+          })
+      );
+  }
+}

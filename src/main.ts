@@ -1,11 +1,23 @@
 import { Plugin } from "obsidian";
+import {
+  InboxSecretarySettings,
+  DEFAULT_SETTINGS,
+  InboxSecretarySettingTab,
+} from "./settings";
 
 export default class InboxSecretaryPlugin extends Plugin {
+  settings: InboxSecretarySettings;
+
   async onload() {
-    console.log("Inbox Secretary loaded");
+    await this.loadSettings();
+    this.addSettingTab(new InboxSecretarySettingTab(this.app, this));
   }
 
-  onunload() {
-    console.log("Inbox Secretary unloaded");
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
   }
 }
