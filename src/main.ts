@@ -35,27 +35,32 @@ export default class InboxSecretaryPlugin extends Plugin {
       return;
     }
 
-    new Notice("ダイジェスト生成中...");
+    const notice = new Notice("ダイジェスト生成中...", 0);
 
     try {
+      notice.setMessage("[1/5] Inboxを読み込み中...");
       const inboxReader = new InboxReader(this.app);
       const items = await inboxReader.readAll(this.settings.inboxFolder);
 
       if (items.length === 0) {
+        notice.hide();
         new Notice("Inboxにアイテムがありません");
         return;
       }
 
+      notice.setMessage(`[2/5] デイリーノートを読み込み中...（Inbox: ${items.length}件）`);
       const dailyNoteReader = new DailyNoteReader(this.app);
       const context = await dailyNoteReader.readRecent(
         this.settings.dailyNoteFolder,
         this.settings.dailyNoteDays
       );
 
+      notice.setMessage("[3/5] LLMでダイジェスト生成中...");
       const client = new GeminiClient(this.settings.geminiApiKey, this.settings.geminiModel);
       const generator = new DigestGenerator(client);
       const entries = await generator.generate(items, context, this.settings.userProfile);
 
+      notice.setMessage("[4/5] ダイジェストを書き出し中...");
       const writer = new DigestWriter(this.app);
       const today = new Date().toISOString().slice(0, 10);
       const path = await writer.write(
@@ -68,12 +73,17 @@ export default class InboxSecretaryPlugin extends Plugin {
       await cleaner.cleanup(
         items,
         this.settings.cleanupMode,
-        this.settings.archiveFolder
+        this.settings.archiveFolder,
+        (current, total, name) => {
+          notice.setMessage(`[5/5] Inboxを整理中...（${current}/${total}）${name}`);
+        }
       );
 
+      notice.hide();
       new Notice(`ダイジェスト生成完了（${entries.length}件）: ${path}`);
     } catch (error) {
       console.error("Inbox Secretary error:", error);
+      notice.hide();
       new Notice(`エラー: ${error.message}`);
     }
   }
