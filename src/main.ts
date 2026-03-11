@@ -119,11 +119,20 @@ export default class InboxSecretaryPlugin extends Plugin {
       // [6/7] Phase 2: 深掘り提案
       notice.setMessage(`[6/7] ピックアップした記事の深掘り中...（${selectedItems.length}件）`);
       const insightGenerator = new InsightGenerator(client);
-      const entries = await insightGenerator.generate(
+      const rawEntries = await insightGenerator.generate(
         selectedItems,
         triageResult.updatedMemory,
         triageResult.userSummary
       );
+
+      // LLMに頼らず元データからURLをマッピング
+      const entries = rawEntries.map((entry) => {
+        const original = selectedItems.find((item) => item.title === entry.title);
+        return {
+          ...entry,
+          sourceUrl: entry.sourceUrl || original?.frontmatter.url,
+        };
+      });
 
       // [7/7] 書き出し + Inbox整理
       notice.setMessage("[7/7] ダイジェストを書き出し中...");
