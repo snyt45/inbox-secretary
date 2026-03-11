@@ -3,19 +3,6 @@ import { App, TFile } from "obsidian";
 export class DailyNoteReader {
   constructor(private app: App) {}
 
-  async readToday(dailyNoteFolder: string): Promise<string> {
-    const today = new Date();
-    const fileName = this.formatDate(today);
-    const path = `${dailyNoteFolder}/${fileName}.md`;
-
-    const file = this.app.vault.getAbstractFileByPath(path);
-    if (!(file instanceof TFile)) {
-      return "";
-    }
-
-    return await this.app.vault.read(file);
-  }
-
   async readRecent(
     dailyNoteFolder: string,
     days: number = 3

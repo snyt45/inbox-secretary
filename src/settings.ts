@@ -6,6 +6,7 @@ export interface InboxSecretarySettings {
   dailyNoteFolder: string;
   digestOutputFolder: string;
   geminiApiKey: string;
+  geminiModel: string;
   dailyNoteDays: number;
   userProfile: string;
   cleanupMode: "delete" | "archive" | "keep";
@@ -14,9 +15,10 @@ export interface InboxSecretarySettings {
 
 export const DEFAULT_SETTINGS: InboxSecretarySettings = {
   inboxFolder: "Inbox",
-  dailyNoteFolder: "Journal/2026/Daily",
+  dailyNoteFolder: "Daily",
   digestOutputFolder: "Inbox",
   geminiApiKey: "",
+  geminiModel: "gemini-2.5-flash-lite",
   dailyNoteDays: 7,
   userProfile: "",
   cleanupMode: "delete",
@@ -53,7 +55,7 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
       .setDesc("今日の関心事を把握するために参照する")
       .addText((text) =>
         text
-          .setPlaceholder("Journal/2026/Daily")
+          .setPlaceholder("Daily")
           .setValue(this.plugin.settings.dailyNoteFolder)
           .onChange(async (value) => {
             this.plugin.settings.dailyNoteFolder = value;
@@ -112,6 +114,19 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.geminiApiKey)
           .onChange(async (value) => {
             this.plugin.settings.geminiApiKey = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Geminiモデル")
+      .setDesc("使用するGeminiモデル名")
+      .addText((text) =>
+        text
+          .setPlaceholder("gemini-2.5-flash-lite")
+          .setValue(this.plugin.settings.geminiModel)
+          .onChange(async (value) => {
+            this.plugin.settings.geminiModel = value;
             await this.plugin.saveSettings();
           })
       );

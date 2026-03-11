@@ -52,7 +52,7 @@ export default class InboxSecretaryPlugin extends Plugin {
         this.settings.dailyNoteDays
       );
 
-      const client = new GeminiClient(this.settings.geminiApiKey);
+      const client = new GeminiClient(this.settings.geminiApiKey, this.settings.geminiModel);
       const generator = new DigestGenerator(client);
       const entries = await generator.generate(items, context, this.settings.userProfile);
 

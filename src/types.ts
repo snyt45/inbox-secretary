@@ -19,9 +19,3 @@ export interface DigestEntry {
   recommendation: string;
   sourceUrl?: string;
 }
-
-export interface DailyDigest {
-  date: string;
-  entries: DigestEntry[];
-  context: string;
-}
