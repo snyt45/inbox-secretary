@@ -43,7 +43,10 @@ ${itemBlock}
 JSONのみ出力してください。マークダウンのコードブロックで囲わないでください。`;
 
       const response = await this.client.generateContent(prompt);
-      entries.push(JSON.parse(response) as DigestEntry);
+      const cleaned = response.replace(/^```(?:json)?\s*\n?/m, "").replace(/\n?```\s*$/m, "").trim();
+      const parsed = JSON.parse(cleaned);
+      const entry = Array.isArray(parsed) ? parsed[0] : parsed;
+      entries.push(entry as DigestEntry);
     }
 
     return entries;
