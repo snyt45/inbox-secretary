@@ -7,34 +7,31 @@ export class DigestGenerator {
   async generate(
     items: InboxItem[],
     dailyNoteContext: string,
-    userProfile: string,
-    onProgress?: (current: number, total: number, name: string) => void
+    userProfile: string
   ): Promise<DigestEntry[]> {
+    const itemsSummary = items
+      .map(
+        (item, i) =>
+          `### アイテム${i + 1}: ${item.title}\nURL: ${item.frontmatter.url ?? "なし"}\nタグ: ${(item.frontmatter.tags ?? []).join(", ")}\n\n${item.body}`
+      )
+      .join("\n\n---\n\n");
+
     const profileSection = userProfile
       ? `## ユーザープロフィール\n${userProfile}`
       : "";
 
-    const contextBlock = `あなたはユーザーの秘書です。${profileSection}
+    const prompt = `あなたはユーザーの秘書です。${profileSection}
 
 ## ユーザーの最近の関心事（Daily Noteより）
-${dailyNoteContext || "（Daily Noteなし）"}`;
+${dailyNoteContext || "（Daily Noteなし）"}
 
-    const entries: DigestEntry[] = [];
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      onProgress?.(i + 1, items.length, item.title);
-
-      const itemBlock = `タイトル: ${item.title}\nURL: ${item.frontmatter.url ?? "なし"}\nタグ: ${(item.frontmatter.tags ?? []).join(", ")}\n\n${item.body}`;
-
-      const prompt = `${contextBlock}
-
-## Inboxのアイテム
-${itemBlock}
+## Inboxにあるアイテム
+${itemsSummary}
 
 ## タスク
-このアイテムについて、以下のJSONオブジェクトを生成してください。
+各アイテムについて、以下のJSON配列を生成してください。
 
+各エントリ:
 - title: アイテムのタイトル（短く）
 - summary: 内容の要約（2-3文）
 - recommendation: 「ユーザーにとってこう使える」という具体的な提案（1-2文）。ユーザーの現在の関心事や進行中のプロジェクトと結びつけて提案する。
@@ -42,13 +39,8 @@ ${itemBlock}
 
 JSONのみ出力してください。マークダウンのコードブロックで囲わないでください。`;
 
-      const response = await this.client.generateContent(prompt);
-      const cleaned = response.replace(/^```(?:json)?\s*\n?/m, "").replace(/\n?```\s*$/m, "").trim();
-      const parsed = JSON.parse(cleaned);
-      const entry = Array.isArray(parsed) ? parsed[0] : parsed;
-      entries.push(entry as DigestEntry);
-    }
-
-    return entries;
+    const response = await this.client.generateContent(prompt);
+    const cleaned = response.replace(/^```(?:json)?\s*\n?/m, "").replace(/\n?```\s*$/m, "").trim();
+    return JSON.parse(cleaned) as DigestEntry[];
   }
 }
