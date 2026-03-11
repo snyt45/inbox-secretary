@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type InboxSecretaryPlugin from "./main";
+import type { SecretaryMemory, TriageLog } from "./types";
 
 export interface InboxSecretarySettings {
   inboxFolder: string;
@@ -11,6 +12,8 @@ export interface InboxSecretarySettings {
   userProfile: string;
   cleanupMode: "delete" | "archive" | "keep";
   archiveFolder: string;
+  memory: SecretaryMemory;
+  triageLogs: TriageLog[];
 }
 
 export const DEFAULT_SETTINGS: InboxSecretarySettings = {
@@ -19,10 +22,12 @@ export const DEFAULT_SETTINGS: InboxSecretarySettings = {
   digestOutputFolder: "Inbox",
   geminiApiKey: "",
   geminiModel: "gemini-2.5-flash-lite",
-  dailyNoteDays: 7,
+  dailyNoteDays: 14,
   userProfile: "",
   cleanupMode: "delete",
   archiveFolder: "Archive",
+  memory: { content: "", lastUpdated: "" },
+  triageLogs: [],
 };
 
 export class InboxSecretarySettingTab extends PluginSettingTab {
@@ -158,6 +163,38 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
             this.plugin.settings.archiveFolder = value;
             await this.plugin.saveSettings();
           })
+      );
+
+    containerEl.createEl("h3", { text: "秘書のメモリ" });
+
+    const memoryDesc = this.plugin.settings.memory.lastUpdated
+      ? `最終更新: ${this.plugin.settings.memory.lastUpdated}`
+      : "まだメモリがありません";
+
+    new Setting(containerEl)
+      .setName("メモリ内容")
+      .setDesc(memoryDesc)
+      .addTextArea((text) => {
+        text.inputEl.rows = 8;
+        text.inputEl.style.width = "100%";
+        text
+          .setValue(this.plugin.settings.memory.content)
+          .onChange(async (value) => {
+            this.plugin.settings.memory.content = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("メモリをリセット")
+      .setDesc("秘書の記憶をすべて消去する")
+      .addButton((btn) =>
+        btn.setButtonText("リセット").onClick(async () => {
+          this.plugin.settings.memory = { content: "", lastUpdated: "" };
+          this.plugin.settings.triageLogs = [];
+          await this.plugin.saveSettings();
+          this.display();
+        })
       );
   }
 }
