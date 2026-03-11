@@ -100,15 +100,17 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("ユーザープロフィール")
       .setDesc("あなたの職種・スキル・興味をLLMに伝える自己紹介文")
-      .addTextArea((text) =>
+      .addTextArea((text) => {
+        text.inputEl.rows = 8;
+        text.inputEl.style.width = "100%";
         text
           .setPlaceholder("例: フルスタックエンジニア。TypeScript, React, Rubyが主な技術スタック。AI活用や個人開発に興味がある。")
           .setValue(this.plugin.settings.userProfile)
           .onChange(async (value) => {
             this.plugin.settings.userProfile = value;
             await this.plugin.saveSettings();
-          })
-      );
+          });
+      });
 
     new Setting(containerEl)
       .setName("Gemini APIキー")
@@ -187,7 +189,7 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("メモリをリセット")
-      .setDesc("秘書の記憶をすべて消去する")
+      .setDesc("メモリ内容と過去のトリアージ履歴をすべて消去する")
       .addButton((btn) =>
         btn.setButtonText("リセット").onClick(async () => {
           this.plugin.settings.memory = { content: "", lastUpdated: "" };
