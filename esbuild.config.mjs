@@ -14,6 +14,7 @@ const copyPlugin = {
       if (PLUGIN_DIR) {
         try {
           copyFileSync("main.js", `${PLUGIN_DIR}/main.js`);
+          copyFileSync("manifest.json", `${PLUGIN_DIR}/manifest.json`);
         } catch (e) {
           console.error("Copy failed:", e.message);
         }
