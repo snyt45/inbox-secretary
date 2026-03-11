@@ -1,5 +1,6 @@
 import { App, TFile } from "obsidian";
 import { DigestEntry } from "./types";
+import { ensureFolder } from "./utils";
 
 export class DigestWriter {
   constructor(private app: App) {}
@@ -9,6 +10,7 @@ export class DigestWriter {
     date: string,
     entries: DigestEntry[]
   ): Promise<string> {
+    await ensureFolder(this.app, outputFolder);
     const content = this.format(date, entries);
     const path = `${outputFolder}/${date} デイリーダイジェスト.md`;
 
