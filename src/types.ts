@@ -13,9 +13,36 @@ export interface InboxItem {
   body: string;
 }
 
+export interface TriageResult {
+  userSummary: string;
+  updatedMemory: string;
+  items: TriageItem[];
+}
+
+export interface TriageItem {
+  title: string;
+  category: "high" | "low";
+  reason: string;
+}
+
 export interface DigestEntry {
   title: string;
-  summary: string;
-  recommendation: string;
+  insight: string;
+  action: string;
   sourceUrl?: string;
+}
+
+export interface SecretaryMemory {
+  content: string;
+  lastUpdated: string;
+}
+
+export interface TriageLog {
+  date: string;
+  items: {
+    title: string;
+    tags: string[];
+    category: "high" | "low";
+    reason: string;
+  }[];
 }
