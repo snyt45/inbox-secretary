@@ -49,7 +49,7 @@ export default class InboxSecretaryPlugin extends Plugin {
       const dailyNoteReader = new DailyNoteReader(this.app);
       const context = await dailyNoteReader.readRecent(
         this.settings.dailyNoteFolder,
-        3
+        this.settings.dailyNoteDays
       );
 
       const client = new GeminiClient(this.settings.geminiApiKey);

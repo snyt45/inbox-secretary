@@ -40,6 +40,7 @@ THINO + LINE連携でモバイルキャプチャ。
 |------|-----------|------|
 | Inbox フォルダ | `Inbox` | 未処理ノートが入っているフォルダ |
 | Daily Note フォルダ | `Journal/2026/Daily` | 関心事の把握に参照する |
+| Daily Note 参照日数 | `7` | 今日を含めて何日分の Daily Note を参照するか |
 | ダイジェスト出力先 | `Inbox` | 生成されたダイジェストの保存先 |
 | Gemini API キー | - | Google AI Studio で取得 |
 | 消化済みアイテムの処理 | 削除 | 削除 / Archive に移動 / そのまま残す |

@@ -6,6 +6,7 @@ export interface InboxSecretarySettings {
   dailyNoteFolder: string;
   digestOutputFolder: string;
   geminiApiKey: string;
+  dailyNoteDays: number;
   cleanupMode: "delete" | "archive" | "keep";
   archiveFolder: string;
 }
@@ -15,6 +16,7 @@ export const DEFAULT_SETTINGS: InboxSecretarySettings = {
   dailyNoteFolder: "Journal/2026/Daily",
   digestOutputFolder: "Inbox",
   geminiApiKey: "",
+  dailyNoteDays: 7,
   cleanupMode: "delete",
   archiveFolder: "Archive",
 };
@@ -67,6 +69,22 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.digestOutputFolder = value;
             await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Daily Note参照日数")
+      .setDesc("今日を含めて何日分のDaily Noteを参照するか")
+      .addText((text) =>
+        text
+          .setPlaceholder("3")
+          .setValue(String(this.plugin.settings.dailyNoteDays))
+          .onChange(async (value) => {
+            const num = parseInt(value, 10);
+            if (!isNaN(num) && num > 0) {
+              this.plugin.settings.dailyNoteDays = num;
+              await this.plugin.saveSettings();
+            }
           })
       );
 
