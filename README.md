@@ -24,18 +24,15 @@ THINO + LINE連携でモバイルキャプチャ。
 → モバイルからのキャプチャ方法は今の課題に合う。
 ```
 
-## セットアップ
+## インストール
 
-```bash
-git clone https://github.com/snyt45/inbox-secretary.git
-cd inbox-secretary
-cp .env.example .env
-# .env の OBSIDIAN_PLUGIN_DIR を自分の vault に合わせて編集
-npm install
-npm run dev
-```
+1. [Releases](https://github.com/snyt45/inbox-secretary/releases) から最新の `main.js`、`manifest.json` をダウンロード
+2. Vault の `.obsidian/plugins/inbox-secretary/` フォルダを作成し、2ファイルを配置
+3. Obsidian を再起動して「設定 > コミュニティプラグイン」から Inbox Secretary を有効化
 
-Obsidian の設定 → コミュニティプラグイン → Inbox Secretary を有効化。
+## 使い方
+
+コマンドパレット → 「デイリーダイジェスト生成」
 
 ## 設定項目
 
@@ -48,19 +45,24 @@ Obsidian の設定 → コミュニティプラグイン → Inbox Secretary を
 | 消化済みアイテムの処理 | 削除 | 削除 / Archive に移動 / そのまま残す |
 | Archive フォルダ | `Archive` | Archive 移動時の保存先 |
 
-## 使い方
-
-コマンドパレット → 「デイリーダイジェスト生成」
-
 ## 開発
 
+Fork して手元で開発する場合の手順。
+
 ```bash
-npm run dev    # watch モード（変更を検知して自動ビルド + vault にコピー）
-npm run build  # プロダクションビルド
+npm install
+cp .env.example .env
 ```
 
-## 技術スタック
+`.env` の `OBSIDIAN_PLUGIN_DIR` を自分の Vault のプラグインディレクトリに書き換える。
 
-- TypeScript + Obsidian Plugin API
-- Gemini API（REST 直叩き、SDK 不要）
-- esbuild
+```
+OBSIDIAN_PLUGIN_DIR=/path/to/vault/.obsidian/plugins/inbox-secretary
+```
+
+設定後、`npm run dev` でビルド＆ファイル監視が起動し、変更のたびにプラグインディレクトリへ自動コピーされる。
+
+```bash
+npm run dev    # 開発モード（ファイル監視 + 自動コピー）
+npm run build  # 本番ビルド
+```

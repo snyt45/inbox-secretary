@@ -18,6 +18,10 @@ export default class InboxSecretaryPlugin extends Plugin {
     await this.loadSettings();
     this.addSettingTab(new InboxSecretarySettingTab(this.app, this));
 
+    this.addRibbonIcon("inbox", "デイリーダイジェスト生成", () => {
+      this.generateDigest();
+    });
+
     this.addCommand({
       id: "generate-daily-digest",
       name: "デイリーダイジェスト生成",
