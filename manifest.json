@@ -1,0 +1,10 @@
+{
+  "id": "inbox-secretary",
+  "name": "Inbox Secretary",
+  "version": "0.1.0",
+  "minAppVersion": "1.0.0",
+  "description": "InboxのノートをLLMが読んでデイリーダイジェストを生成する秘書プラグイン",
+  "author": "snyt45",
+  "authorUrl": "https://github.com/snyt45",
+  "isDesktopOnly": false
+}
