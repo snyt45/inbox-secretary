@@ -6,7 +6,8 @@ export class DigestGenerator {
 
   async generate(
     items: InboxItem[],
-    dailyNoteContext: string
+    dailyNoteContext: string,
+    userProfile: string
   ): Promise<DigestEntry[]> {
     const itemsSummary = items
       .map(
@@ -15,9 +16,13 @@ export class DigestGenerator {
       )
       .join("\n\n---\n\n");
 
-    const prompt = `あなたは「ゆうた」の秘書です。ゆうたはフルスタックエンジニア（Ruby, TypeScript, React）で、AI/LLM活用、開発ツール改善、Obsidian/PKM、個人開発に興味があります。
+    const profileSection = userProfile
+      ? `## ユーザープロフィール\n${userProfile}`
+      : "";
 
-## ゆうたの最近の関心事（Daily Noteより）
+    const prompt = `あなたはユーザーの秘書です。${profileSection}
+
+## ユーザーの最近の関心事（Daily Noteより）
 ${dailyNoteContext || "（Daily Noteなし）"}
 
 ## Inboxにあるアイテム
@@ -29,7 +34,7 @@ ${itemsSummary}
 各エントリ:
 - title: アイテムのタイトル（短く）
 - summary: 内容の要約（2-3文）
-- recommendation: 「ゆうたにとってこう使える」という具体的な提案（1-2文）。ゆうたの現在の関心事や進行中のプロジェクトと結びつけて提案する。
+- recommendation: 「ユーザーにとってこう使える」という具体的な提案（1-2文）。ユーザーの現在の関心事や進行中のプロジェクトと結びつけて提案する。
 - sourceUrl: 元記事のURL（あれば）
 
 JSONのみ出力してください。マークダウンのコードブロックで囲わないでください。`;

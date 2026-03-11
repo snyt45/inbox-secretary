@@ -54,7 +54,7 @@ export default class InboxSecretaryPlugin extends Plugin {
 
       const client = new GeminiClient(this.settings.geminiApiKey);
       const generator = new DigestGenerator(client);
-      const entries = await generator.generate(items, context);
+      const entries = await generator.generate(items, context, this.settings.userProfile);
 
       const writer = new DigestWriter(this.app);
       const today = new Date().toISOString().slice(0, 10);

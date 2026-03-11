@@ -7,6 +7,7 @@ export interface InboxSecretarySettings {
   digestOutputFolder: string;
   geminiApiKey: string;
   dailyNoteDays: number;
+  userProfile: string;
   cleanupMode: "delete" | "archive" | "keep";
   archiveFolder: string;
 }
@@ -17,6 +18,7 @@ export const DEFAULT_SETTINGS: InboxSecretarySettings = {
   digestOutputFolder: "Inbox",
   geminiApiKey: "",
   dailyNoteDays: 7,
+  userProfile: "",
   cleanupMode: "delete",
   archiveFolder: "Archive",
 };
@@ -85,6 +87,19 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
               this.plugin.settings.dailyNoteDays = num;
               await this.plugin.saveSettings();
             }
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("ユーザープロフィール")
+      .setDesc("あなたの職種・スキル・興味をLLMに伝える自己紹介文")
+      .addTextArea((text) =>
+        text
+          .setPlaceholder("例: フルスタックエンジニア。TypeScript, React, Rubyが主な技術スタック。AI活用や個人開発に興味がある。")
+          .setValue(this.plugin.settings.userProfile)
+          .onChange(async (value) => {
+            this.plugin.settings.userProfile = value;
+            await this.plugin.saveSettings();
           })
       );
 
