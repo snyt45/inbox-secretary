@@ -2,9 +2,12 @@ import { GeminiClient } from "./gemini-client";
 import { InboxItem, DigestEntry } from "./types";
 
 const INSIGHT_SYSTEM_INSTRUCTION = `あなたはユーザー専属の情報秘書です。
-選別済みの記事について、このユーザーが具体的にどう活用できるかを提案してください。
-「参考になるでしょう」「役立つかもしれません」のような一般論は禁止。
-「あなたの○○で△△できる」「今やっている○○に直接使える」まで踏み込むこと。`;
+
+出力ルール:
+- insightは1-2文。「あなたは○○に関心があります」のような前置きは書くな。記事の何がユーザーの今の作業にどう刺さるかだけ書け
+- actionは1文。「検討してください」「活用してください」は禁止。「○○を試す」「○○に適用する」のように具体的な動詞で終わらせろ
+- 記事の要約は書くな。ユーザーは記事を自分で読める。秘書の仕事は「なぜ今読むべきか」と「読んだ後に何をすべきか」だけ伝えること
+- 冗長な敬語は使うな。簡潔に、同僚に話すように書け`;
 
 const INSIGHT_SCHEMA = {
   type: "ARRAY",
@@ -14,11 +17,11 @@ const INSIGHT_SCHEMA = {
       title: { type: "STRING", description: "アイテムのタイトル（短く）" },
       insight: {
         type: "STRING",
-        description: "なぜこのユーザーに関係あるか。具体的な文脈と結びつけて説明",
+        description: "1-2文。なぜ今の作業に刺さるか。前置き不要、核心だけ",
       },
       action: {
         type: "STRING",
-        description: "具体的に何をすべきか。ファイル名やツール名まで踏み込む",
+        description: "1文。読んだ後に何をすべきか。具体的な動詞で終わる",
       },
       sourceUrl: { type: "STRING", description: "元記事のURL（あれば）" },
     },
@@ -56,14 +59,19 @@ ${itemsBlock}
 <examples>
 <example>
 アイテム: Claude Code 4.6のスキル機能
-insight: 今開発中のObsidianプラグインで、コマンド追加のたびにmain.tsが肥大化している。スキルの仕組みを参考に、各機能を独立モジュールとして動的ロードする設計にできる。
-action: src/main.tsのaddCommand部分を見直し、DigestGeneratorのように機能単位でクラス分離するリファクタリングを検討する。
+insight: 今のinbox-secretaryのmain.tsがコマンド追加のたびに肥大化する問題を、スキルベースの動的ロード設計で解決できる。
+action: main.tsのaddCommand部分をスキル単位のモジュールに分離する。
+</example>
+<example>
+アイテム: Ruby 3.4のパターンマッチング改善
+insight: 仕事のRailsプロジェクトで条件分岐が複雑になっているコントローラに、in演算子のパターンマッチが効く。
+action: 複雑なcase文がある箇所をパターンマッチで書き直して可読性を比較する。
 </example>
 </examples>
 
 <instructions>
-各アイテムについて、このユーザーが具体的にどう活用できるかをinsightとactionで提案してください。
-一般的な要約は不要。このユーザーの今の状況にどう刺さるかだけを書いてください。
+各アイテムについて、insightとactionを書け。
+insightは「なぜ今読むべきか」、actionは「読んだ後に何をすべきか」。それ以外は書くな。
 </instructions>`;
 
     return this.client.generateStructured<DigestEntry[]>(
