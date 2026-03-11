@@ -55,10 +55,13 @@ export default class InboxSecretaryPlugin extends Plugin {
         this.settings.dailyNoteDays
       );
 
-      notice.setMessage("[3/5] LLMでダイジェスト生成中...");
       const client = new GeminiClient(this.settings.geminiApiKey, this.settings.geminiModel);
       const generator = new DigestGenerator(client);
-      const entries = await generator.generate(items, context, this.settings.userProfile);
+      const entries = await generator.generate(items, context, this.settings.userProfile,
+        (current, total, name) => {
+          notice.setMessage(`[3/5] LLMでダイジェスト生成中...（${current}/${total}）${name}`);
+        }
+      );
 
       notice.setMessage("[4/5] ダイジェストを書き出し中...");
       const writer = new DigestWriter(this.app);
