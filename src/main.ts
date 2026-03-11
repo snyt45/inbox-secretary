@@ -9,7 +9,7 @@ import { DailyNoteReader } from "./daily-note-reader";
 import { GeminiClient } from "./gemini-client";
 import { TriageEngine } from "./triage-engine";
 import { InsightGenerator } from "./insight-generator";
-import { DigestWriter } from "./digest-writer";
+import { DigestWriter, DigestWriteParams } from "./digest-writer";
 import { InboxCleaner } from "./inbox-cleaner";
 import { TriageLog } from "./types";
 
@@ -136,15 +136,22 @@ export default class InboxSecretaryPlugin extends Plugin {
 
       // [7/7] 書き出し + Inbox整理
       notice.setMessage("[7/7] ダイジェストを書き出し中...");
+      const dailyNoteCount = (dailyContext.match(/^## /gm) || []).length;
       const writer = new DigestWriter(this.app);
-      const path = await writer.write(
-        this.settings.digestOutputFolder,
-        today,
-        triageResult.userSummary,
+      const writeParams: DigestWriteParams = {
+        outputFolder: this.settings.digestOutputFolder,
+        date: today,
+        userSummary: triageResult.userSummary,
         entries,
-        triageResult.items,
-        items.length
-      );
+        triageItems: triageResult.items,
+        totalCount: items.length,
+        dailyNoteDays: this.settings.dailyNoteDays,
+        dailyNoteCount,
+        memoryExists: !!memory.content,
+        triageLogCount: triageLogs.length,
+        model: this.settings.geminiModel,
+      };
+      const path = await writer.write(writeParams);
 
       const cleaner = new InboxCleaner(this.app);
       await cleaner.cleanup(
