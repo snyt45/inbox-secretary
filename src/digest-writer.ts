@@ -1,6 +1,7 @@
 import { App, TFile } from "obsidian";
 import { DigestEntry, TriageItem } from "./types";
 import { ensureFolder } from "./utils";
+import { digestPath, DIGEST_FILENAME_SUFFIX } from "./constants";
 
 export interface DigestWriteParams {
   outputFolder: string;
@@ -22,7 +23,7 @@ export class DigestWriter {
   async write(params: DigestWriteParams): Promise<string> {
     await ensureFolder(this.app, params.outputFolder);
     const content = this.format(params);
-    const path = `${params.outputFolder}/${params.date} デイリーダイジェスト.md`;
+    const path = digestPath(params.outputFolder, params.date);
 
     const existing = this.app.vault.getAbstractFileByPath(path);
     if (existing instanceof TFile) {
@@ -50,7 +51,7 @@ export class DigestWriter {
       `triaged: ${totalCount}`,
       `picked: ${pickedCount}`,
       "---",
-      `# ${date} ダイジェスト`,
+      `# ${date} ${DIGEST_FILENAME_SUFFIX}`,
       "",
       userSummary,
       "",

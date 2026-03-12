@@ -6,7 +6,7 @@ export class DailyNoteReader {
   async readRecent(
     dailyNoteFolder: string,
     days: number = 3
-  ): Promise<string> {
+  ): Promise<{ content: string; fileCount: number }> {
     const notes: string[] = [];
     const today = new Date();
 
@@ -23,7 +23,7 @@ export class DailyNoteReader {
       }
     }
 
-    return notes.join("\n\n");
+    return { content: notes.join("\n\n"), fileCount: notes.length };
   }
 
   private formatDate(date: Date): string {

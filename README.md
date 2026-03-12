@@ -13,15 +13,27 @@ Obsidian プラグイン。Inbox に溜まったノートを LLM が読んで「
 ## 出力イメージ
 
 ```markdown
-# 2026-03-11 デイリーダイジェスト
+# 2026-03-11 ダイジェスト
 
-## Claude Code research の待ち時間をゼロに
-Skillとサブエージェントを組み合わせて待ち時間を消す構成。
-→ superpowersスキルのサブエージェント設計の参考になる。
+Obsidianプラグイン開発とClaude Codeのスキル設計に集中している週。AI系ツールの記事が多め。
 
-## Obsidian × Zettelkasten 運用カスタマイズ
-THINO + LINE連携でモバイルキャプチャ。
-→ モバイルからのキャプチャ方法は今の課題に合う。
+> [!tip] Claude Code research の待ち時間をゼロに
+> Skillとサブエージェントを組み合わせて待ち時間を消す構成。
+> **Next:** superpowersスキルのサブエージェント設計に、この分離パターンを試す
+> [元記事](https://example.com/article)
+
+> [!tip] Obsidian × Zettelkasten 運用カスタマイズ
+> THINO + LINE連携でモバイルキャプチャを実現している事例。
+> **Next:** モバイルキャプチャの導線を自分の環境で組んでみる
+> [元記事](https://example.com/article2)
+
+> [!note]- 除外アイテム（12件）
+> - **Kubernetes 1.32** -- インフラ運用は現在のスコープ外
+> - ...
+
+> [!abstract]- プロセス情報
+> - モデル: gemini-2.5-flash
+> - 結果: 15件 → 2件ピックアップ / 12件除外
 ```
 
 ## インストール
@@ -41,10 +53,11 @@ THINO + LINE連携でモバイルキャプチャ。
 | Inbox フォルダ | `Inbox` | 未処理ノートが入っているフォルダ |
 | Daily Note フォルダ | `Daily` | 関心事の把握に参照する |
 | ダイジェスト出力先 | `Inbox` | 生成されたダイジェストの保存先 |
-| Daily Note 参照日数 | `7` | 今日を含めて何日分の Daily Note を参照するか |
+| Daily Note 参照日数 | `14` | 今日を含めて何日分の Daily Note を参照するか |
 | ユーザープロフィール | - | 職種・スキル・興味などの自己紹介文 |
+| 除外トピック | - | 見たくないトピックを改行区切りで指定 |
 | Gemini API キー | - | Google AI Studio で取得 |
-| Gemini モデル | `gemini-2.5-flash-lite` | 使用する Gemini モデル名 |
+| Gemini モデル | `gemini-2.5-flash` | 使用する Gemini モデル名 |
 | 消化済みアイテムの処理 | 削除 | 削除 / Archive に移動 / そのまま残す |
 | Archive フォルダ | `Archive` | Archive 移動時の保存先 |
 

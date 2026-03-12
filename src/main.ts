@@ -1,4 +1,4 @@
-import { Notice, Plugin } from "obsidian";
+import { Modal, Notice, Plugin, TFile } from "obsidian";
 import {
   InboxSecretarySettings,
   DEFAULT_SETTINGS,
@@ -12,11 +12,41 @@ import { InsightGenerator } from "./insight-generator";
 import { DigestWriter, DigestWriteParams } from "./digest-writer";
 import { InboxCleaner } from "./inbox-cleaner";
 import { TriageLog } from "./types";
+import { digestPath, legacyDigestPath, MAX_TRIAGE_LOGS } from "./constants";
 
-const MAX_TRIAGE_LOGS = 5;
+class ConfirmModal extends Modal {
+  private resolved = false;
+  private resolve: (value: boolean) => void;
+
+  constructor(app: import("obsidian").App, private message: string, private promise: { resolve: (value: boolean) => void }) {
+    super(app);
+    this.resolve = promise.resolve;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl("p", { text: this.message });
+    const buttonContainer = contentEl.createDiv({ cls: "modal-button-container" });
+    buttonContainer.createEl("button", { text: "上書き実行", cls: "mod-warning" }).addEventListener("click", () => {
+      this.resolved = true;
+      this.resolve(true);
+      this.close();
+    });
+    buttonContainer.createEl("button", { text: "キャンセル" }).addEventListener("click", () => {
+      this.resolved = true;
+      this.resolve(false);
+      this.close();
+    });
+  }
+
+  onClose() {
+    if (!this.resolved) this.resolve(false);
+  }
+}
 
 export default class InboxSecretaryPlugin extends Plugin {
   settings: InboxSecretarySettings;
+  private running = false;
 
   async onload() {
     await this.loadSettings();
@@ -39,6 +69,23 @@ export default class InboxSecretaryPlugin extends Plugin {
       return;
     }
 
+    if (this.running) {
+      new Notice("ダイジェスト生成中です。完了までお待ちください");
+      return;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const currentPath = digestPath(this.settings.digestOutputFolder, today);
+    const legacy = legacyDigestPath(this.settings.digestOutputFolder, today);
+    const existing = this.app.vault.getAbstractFileByPath(currentPath) ?? this.app.vault.getAbstractFileByPath(legacy);
+    if (existing instanceof TFile) {
+      const confirmed = await new Promise<boolean>((resolve) => {
+        new ConfirmModal(this.app, `${today} のダイジェストは既に存在します。上書きしますか？`, { resolve }).open();
+      });
+      if (!confirmed) return;
+    }
+
+    this.running = true;
     const notice = new Notice("ダイジェスト生成中...", 0);
 
     try {
@@ -56,7 +103,7 @@ export default class InboxSecretaryPlugin extends Plugin {
       // [2/7] Daily Note読み込み
       notice.setMessage(`[2/7] Daily Note読み込み中...（${this.settings.dailyNoteDays}日分）`);
       const dailyNoteReader = new DailyNoteReader(this.app);
-      const dailyContext = await dailyNoteReader.readRecent(
+      const { content: dailyContext, fileCount: dailyNoteCount } = await dailyNoteReader.readRecent(
         this.settings.dailyNoteFolder,
         this.settings.dailyNoteDays
       );
@@ -85,7 +132,6 @@ export default class InboxSecretaryPlugin extends Plugin {
       };
 
       // トリアージログ保存
-      const today = new Date().toISOString().slice(0, 10);
       const newLog: TriageLog = {
         date: today,
         items: triageResult.items.map((ti) => ({
@@ -140,7 +186,6 @@ export default class InboxSecretaryPlugin extends Plugin {
 
       // [7/7] 書き出し + Inbox整理
       notice.setMessage("[7/7] ダイジェストを書き出し中...");
-      const dailyNoteCount = (dailyContext.match(/^## /gm) || []).length;
       const writer = new DigestWriter(this.app);
       const writeParams: DigestWriteParams = {
         outputFolder: this.settings.digestOutputFolder,
@@ -173,6 +218,8 @@ export default class InboxSecretaryPlugin extends Plugin {
       console.error("Inbox Secretary error:", error);
       notice.hide();
       new Notice(`エラー: ${error.message}`);
+    } finally {
+      this.running = false;
     }
   }
 
