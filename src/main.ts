@@ -74,7 +74,8 @@ export default class InboxSecretaryPlugin extends Plugin {
         dailyContext,
         this.settings.userProfile,
         memory,
-        triageLogs
+        triageLogs,
+        this.settings.excludeTopics
       );
 
       // メモリ更新

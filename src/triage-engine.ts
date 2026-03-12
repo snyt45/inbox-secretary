@@ -12,7 +12,7 @@ const TRIAGE_SCHEMA = {
     },
     updatedMemory: {
       type: "STRING",
-      description: "更新されたメモリ。新情報をマージし古い情報を更新。変化なければ既存のまま",
+      description: "更新されたメモリ。必ず以下の4セクションで構成: ## 今のフォーカス（今週取り組んでいる具体的な作業）/ ## 技術スタック / ## 追っているテーマ（3-5個）/ ## 今は追わないもの",
     },
     items: {
       type: "ARRAY",
@@ -42,7 +42,8 @@ export class TriageEngine {
     dailyNoteContext: string,
     userProfile: string,
     memory: SecretaryMemory,
-    triageLogs: TriageLog[]
+    triageLogs: TriageLog[],
+    excludeTopics: string
   ): Promise<TriageResult> {
     const itemsSummary = items
       .map(
@@ -53,13 +54,18 @@ export class TriageEngine {
 
     const triageHistorySummary = this.formatTriageLogs(triageLogs);
 
+    const excludeSection = excludeTopics.trim()
+      ? `\n<exclude_topics>\n以下のトピックに該当するアイテムは必ずlowにすること:\n${excludeTopics}\n</exclude_topics>\n`
+      : "";
+
     const prompt = `<user_profile>
 ${userProfile || "（未設定）"}
 </user_profile>
 
 <secretary_memory>
-${memory.content || "（まだメモリがありません。今回の情報から構築してください）"}
+${memory.content || "（まだメモリがありません。以下の4セクションで構築してください: ## 今のフォーカス / ## 技術スタック / ## 追っているテーマ / ## 今は追わないもの）"}
 </secretary_memory>
+${excludeSection}
 
 <triage_history>
 ${triageHistorySummary || "（過去の履歴なし）"}
@@ -78,7 +84,12 @@ ${itemsSummary}
 
 1. Daily Noteとメモリから、ユーザーの現在の状況・関心・進行中の作業を把握し、userSummaryとして出力する
 
-2. secretaryMemoryを更新する。新しく読み取れた情報があればマージし、古くなった情報は更新する。変化がなければ既存のまま返す
+2. secretaryMemoryを更新する。必ず以下の4セクション構成で出力すること:
+   ## 今のフォーカス（今週取り組んでいる具体的な作業。1-2行）
+   ## 技術スタック（使っている言語・フレームワーク・ツール）
+   ## 追っているテーマ（3-5個。具体的に）
+   ## 今は追わないもの（興味はあるが今は優先しないトピック）
+   新しく読み取れた情報があればマージし、古くなった情報は更新する
 
 3. 各Inboxアイテムについて、このユーザーに関係あるかをhigh/lowで判定する
    highにできるのは最大でも全体の3割まで。10件あればhighは最大3件、30件なら最大9件。

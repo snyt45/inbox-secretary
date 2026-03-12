@@ -10,6 +10,7 @@ export interface InboxSecretarySettings {
   geminiModel: string;
   dailyNoteDays: number;
   userProfile: string;
+  excludeTopics: string;
   cleanupMode: "delete" | "archive" | "keep";
   archiveFolder: string;
   memory: SecretaryMemory;
@@ -21,9 +22,10 @@ export const DEFAULT_SETTINGS: InboxSecretarySettings = {
   dailyNoteFolder: "Daily",
   digestOutputFolder: "Inbox",
   geminiApiKey: "",
-  geminiModel: "gemini-2.5-flash-lite",
+  geminiModel: "gemini-2.5-flash",
   dailyNoteDays: 14,
   userProfile: "",
+  excludeTopics: "",
   cleanupMode: "delete",
   archiveFolder: "Archive",
   memory: { content: "", lastUpdated: "" },
@@ -108,6 +110,21 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.userProfile)
           .onChange(async (value) => {
             this.plugin.settings.userProfile = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("除外トピック")
+      .setDesc("秘書に無視させたいトピックやジャンル（改行区切り）")
+      .addTextArea((text) => {
+        text.inputEl.rows = 4;
+        text.inputEl.style.width = "100%";
+        text
+          .setPlaceholder("例:\nAI動画・収益化系\nAIイラスト生成\nモバイルアプリ開発")
+          .setValue(this.plugin.settings.excludeTopics)
+          .onChange(async (value) => {
+            this.plugin.settings.excludeTopics = value;
             await this.plugin.saveSettings();
           });
       });
