@@ -42,6 +42,15 @@ class ConfirmModal extends Modal {
   }
 }
 
+function withTimer<T>(notice: Notice, message: string, task: Promise<T>): Promise<T> {
+  let seconds = 0;
+  const timer = window.setInterval(() => {
+    seconds++;
+    notice.setMessage(`${message}（${seconds}秒）`);
+  }, 1000);
+  return task.finally(() => clearInterval(timer));
+}
+
 export default class InboxSecretaryPlugin extends Plugin {
   settings: InboxSecretarySettings;
   private running = false;
@@ -98,16 +107,15 @@ export default class InboxSecretaryPlugin extends Plugin {
       }
 
       // トリアージ
-      notice.setMessage(`分析中...（${items.length}件）`);
       const client = new GeminiClient(this.settings.geminiApiKey, this.settings.geminiModel);
       const triageEngine = new TriageEngine(client);
-      const triageResult = await triageEngine.run(items, this.settings.userProfile);
+      const triageResult = await withTimer(notice, `分析中...${items.length}件`, triageEngine.run(items, this.settings.userProfile));
 
       const highItems = triageResult.items.filter((i) => i.category === "high");
 
       if (highItems.length === 0) {
         notice.hide();
-        new Notice("今回ピックアップするアイテムはありませんでした");
+        new Notice(`ピックアップなし（${items.length}件すべて除外）`);
         return;
       }
 
@@ -115,14 +123,13 @@ export default class InboxSecretaryPlugin extends Plugin {
       const highTitles = new Set(highItems.map((i) => i.title));
       const selectedItems = items.filter((item) => highTitles.has(item.title));
 
-      notice.setMessage(`深掘り中...（${selectedItems.length}件ピックアップ）`);
       const insightGenerator = new InsightGenerator(client);
-      const rawEntries = await insightGenerator.generate(
+      const rawEntries = await withTimer(notice, `深掘り中...${selectedItems.length}件`, insightGenerator.generate(
         selectedItems,
         this.settings.userProfile,
         triageResult.userSummary,
         triageResult.items
-      );
+      ));
 
       // 元データからURLをマッピング
       const entries = rawEntries.map((entry) => {
@@ -157,7 +164,13 @@ export default class InboxSecretaryPlugin extends Plugin {
       );
 
       notice.hide();
-      new Notice(`完了（${entries.length}件ピックアップ / ${items.length}件中）: ${path}`);
+      new Notice(`完了（${entries.length}件ピックアップ / ${items.length}件中）`);
+
+      // ダイジェストを開く
+      const digestFile = this.app.vault.getAbstractFileByPath(path);
+      if (digestFile instanceof TFile) {
+        await this.app.workspace.getLeaf().openFile(digestFile);
+      }
     } catch (error) {
       console.error("Inbox Secretary error:", error);
       notice.hide();
