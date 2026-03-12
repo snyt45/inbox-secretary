@@ -1,13 +1,11 @@
 import { App, TFile, TFolder } from "obsidian";
-import { DigestEntry, TriageItem } from "./types";
+import { DigestEntry } from "./types";
 import { digestPath, DIGEST_FILENAME_SUFFIX } from "./constants";
 
 export interface DigestWriteParams {
   outputFolder: string;
   date: string;
-  userSummary: string;
   entries: DigestEntry[];
-  triageItems: TriageItem[];
   totalCount: number;
 }
 
@@ -34,9 +32,8 @@ export class DigestWriter {
   }
 
   private format(params: DigestWriteParams): string {
-    const { date, userSummary, entries, triageItems, totalCount } = params;
+    const { date, entries, totalCount } = params;
     const pickedCount = entries.length;
-    const lowCount = triageItems.filter((i) => i.category === "low").length;
 
     const lines: string[] = [
       "---",
@@ -48,22 +45,16 @@ export class DigestWriter {
       "---",
       `# ${date} ${DIGEST_FILENAME_SUFFIX}`,
       "",
-      userSummary,
+      `${pickedCount}件ピックアップ / ${totalCount}件中`,
       "",
     ];
 
     for (const entry of entries) {
-      lines.push(`> [!tip] ${entry.title}`);
-      lines.push(`> ${entry.insight}`);
-      lines.push(`> **Next:** ${entry.action}`);
-      if (entry.sourceUrl) {
-        lines.push(`> [Source](${entry.sourceUrl})`);
-      }
-      lines.push("");
-    }
-
-    if (lowCount > 0) {
-      lines.push(`*${lowCount}件を除外*`);
+      lines.push(`> [!example] ${entry.title}`);
+      lines.push(`> **Try:** ${entry.action}`);
+      lines.push(`>`);
+      const sourcePart = entry.sourceUrl ? ` [Read →](${entry.sourceUrl})` : "";
+      lines.push(`> ${entry.insight}${sourcePart}`);
       lines.push("");
     }
 

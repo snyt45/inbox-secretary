@@ -16,16 +16,18 @@ class ConfirmModal extends Modal {
   private resolved = false;
   private resolve: (value: boolean) => void;
 
-  constructor(app: import("obsidian").App, private message: string, private promise: { resolve: (value: boolean) => void }) {
+  constructor(app: import("obsidian").App, private message: string, private confirmText: string, private promise: { resolve: (value: boolean) => void }) {
     super(app);
     this.resolve = promise.resolve;
   }
 
   onOpen() {
     const { contentEl } = this;
-    contentEl.createEl("p", { text: this.message });
+    for (const line of this.message.split("\n")) {
+      contentEl.createEl("p", { text: line });
+    }
     const buttonContainer = contentEl.createDiv({ cls: "modal-button-container" });
-    buttonContainer.createEl("button", { text: "上書き実行", cls: "mod-warning" }).addEventListener("click", () => {
+    buttonContainer.createEl("button", { text: this.confirmText, cls: "mod-warning" }).addEventListener("click", () => {
       this.resolved = true;
       this.resolve(true);
       this.close();
@@ -84,13 +86,18 @@ export default class InboxSecretaryPlugin extends Plugin {
     const today = new Date().toISOString().slice(0, 10);
     const currentPath = digestPath(this.settings.digestOutputFolder, today);
     const legacy = legacyDigestPath(this.settings.digestOutputFolder, today);
-    const existing = this.app.vault.getAbstractFileByPath(currentPath) ?? this.app.vault.getAbstractFileByPath(legacy);
-    if (existing instanceof TFile) {
-      const confirmed = await new Promise<boolean>((resolve) => {
-        new ConfirmModal(this.app, `${today} のダイジェストは既に存在します。上書きしますか？`, { resolve }).open();
-      });
-      if (!confirmed) return;
-    }
+    const isOverwrite = this.app.vault.getAbstractFileByPath(currentPath) instanceof TFile
+      || this.app.vault.getAbstractFileByPath(legacy) instanceof TFile;
+
+    const message = isOverwrite
+      ? `${today} のダイジェストは既に存在します。上書きしますか？\nGemini APIを消費します。`
+      : `ダイジェストを生成しますか？\nGemini APIを消費します。`;
+
+    const confirmText = isOverwrite ? "上書き実行" : "実行";
+    const confirmed = await new Promise<boolean>((resolve) => {
+      new ConfirmModal(this.app, message, confirmText, { resolve }).open();
+    });
+    if (!confirmed) return;
 
     this.running = true;
     const notice = new Notice("ダイジェスト生成中...", 0);
@@ -145,9 +152,7 @@ export default class InboxSecretaryPlugin extends Plugin {
       const writeParams: DigestWriteParams = {
         outputFolder: this.settings.digestOutputFolder,
         date: today,
-        userSummary: triageResult.userSummary,
         entries,
-        triageItems: triageResult.items,
         totalCount: items.length,
       };
       const path = await writer.write(writeParams);
