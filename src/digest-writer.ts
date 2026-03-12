@@ -50,55 +50,36 @@ export class DigestWriter {
       `triaged: ${totalCount}`,
       `picked: ${pickedCount}`,
       "---",
-      `# ${date} デイリーダイジェスト`,
+      `# ${date} ダイジェスト`,
       "",
-      "## ピックアップ",
+      userSummary,
       "",
     ];
 
     for (const entry of entries) {
-      lines.push(`### ${entry.title}`);
-      lines.push("");
-      lines.push(entry.insight);
-      lines.push("");
-      lines.push(`→ ${entry.action}`);
+      lines.push(`> [!tip] ${entry.title}`);
+      lines.push(`> ${entry.insight}`);
+      lines.push(`> **Next:** ${entry.action}`);
       if (entry.sourceUrl) {
-        lines.push("");
-        lines.push(`Source: ${entry.sourceUrl}`);
+        lines.push(`> [元記事](${entry.sourceUrl})`);
       }
       lines.push("");
     }
 
     if (lowItems.length > 0) {
-      lines.push("---");
-      lines.push("");
-      lines.push("## 除外したアイテム");
-      lines.push("");
-      lines.push("| タイトル | 理由 |");
-      lines.push("|---------|------|");
+      lines.push(`> [!note]- 除外アイテム（${lowItems.length}件）`);
       for (const item of lowItems) {
-        lines.push(`| ${item.title} | ${item.reason} |`);
+        lines.push(`> - **${item.title}** -- ${item.reason}`);
       }
       lines.push("");
     }
 
-    lines.push("---");
-    lines.push("");
-    lines.push("## プロセス");
-    lines.push("");
-    lines.push(`- モデル: ${model}`);
-    lines.push(`- Daily Note: ${dailyNoteDays}日分を参照（${dailyNoteCount}件見つかった）`);
-    lines.push(`- メモリ: ${memoryExists ? "あり（蓄積済み）" : "なし（初回実行）"}`);
-    lines.push(`- トリアージ履歴: ${triageLogCount}回分`);
-    lines.push(`- 結果: ${totalCount}件中${pickedCount}件をピックアップ / ${lowItems.length}件を除外`);
-    lines.push("");
-
-    lines.push("## 秘書メモ");
-    lines.push("");
-    const summaryLines = userSummary.split("\n");
-    for (const line of summaryLines) {
-      lines.push(`> ${line}`);
-    }
+    lines.push("> [!abstract]- プロセス情報");
+    lines.push(`> - モデル: ${model}`);
+    lines.push(`> - Daily Note: ${dailyNoteDays}日分（${dailyNoteCount}件ヒット）`);
+    lines.push(`> - メモリ: ${memoryExists ? "蓄積済み" : "初回実行"}`);
+    lines.push(`> - トリアージ履歴: ${triageLogCount}回分`);
+    lines.push(`> - 結果: ${totalCount}件 → ${pickedCount}件ピックアップ / ${lowItems.length}件除外`);
     lines.push("");
 
     return lines.join("\n");

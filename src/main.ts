@@ -123,7 +123,10 @@ export default class InboxSecretaryPlugin extends Plugin {
       const rawEntries = await insightGenerator.generate(
         selectedItems,
         triageResult.updatedMemory,
-        triageResult.userSummary
+        triageResult.userSummary,
+        triageResult.items,
+        dailyContext,
+        this.settings.userProfile
       );
 
       // LLMに頼らず元データからURLをマッピング

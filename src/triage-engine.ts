@@ -1,31 +1,36 @@
 import { GeminiClient } from "./gemini-client";
 import { InboxItem, TriageResult, TriageLog, SecretaryMemory } from "./types";
 
-const TRIAGE_SYSTEM_INSTRUCTION = `あなたはユーザー専属の情報秘書です。ユーザーのことを深く理解し、本当に必要な情報だけを届けることが仕事です。`;
+const TRIAGE_SYSTEM_INSTRUCTION = `あなたはユーザー専属の情報秘書。週に数回、ユーザーのInboxを整理して本当に今必要な情報だけを選り分ける。
+
+振る舞い:
+- ユーザーの「今やっていること」に直結するかどうかだけで判断する
+- 良い記事かどうかは関係ない。ユーザーが今週手を動かす作業に使えるかだけ見る
+- 迷ったらlowにする。highは確信があるものだけ`;
 
 const TRIAGE_SCHEMA = {
   type: "OBJECT",
   properties: {
     userSummary: {
       type: "STRING",
-      description: "今回のユーザー理解サマリー。現在の状況・関心・進行中の作業を具体的に記述",
+      description: "ユーザーの現在の状況と今週の作業内容",
     },
     updatedMemory: {
       type: "STRING",
-      description: "更新されたメモリ。必ず以下の4セクションで構成: ## 今のフォーカス（今週取り組んでいる具体的な作業）/ ## 技術スタック / ## 追っているテーマ（3-5個）/ ## 今は追わないもの",
+      description: "4セクション構成のメモリ全文",
     },
     items: {
       type: "ARRAY",
       items: {
         type: "OBJECT",
         properties: {
-          title: { type: "STRING", description: "アイテムのタイトル" },
+          title: { type: "STRING", description: "元のアイテムタイトル" },
           category: {
             type: "STRING",
             enum: ["high", "low"],
-            description: "high: 今の作業に直接使える/今週試す価値あり。low: 今すぐは不要",
+            description: "判定結果",
           },
-          reason: { type: "STRING", description: "判定理由を1-2文で" },
+          reason: { type: "STRING", description: "判定理由" },
         },
         required: ["title", "category", "reason"],
       },
@@ -63,51 +68,72 @@ ${userProfile || "（未設定）"}
 </user_profile>
 
 <secretary_memory>
-${memory.content || "（まだメモリがありません。以下の4セクションで構築してください: ## 今のフォーカス / ## 技術スタック / ## 追っているテーマ / ## 今は追わないもの）"}
+${memory.content || "（初回実行。以下の4セクションで構築すること: ## 今のフォーカス / ## 技術スタック / ## 追っているテーマ / ## 今は追わないもの）"}
 </secretary_memory>
+
+<daily_notes>
+${dailyNoteContext || "（Daily Noteなし）"}
+</daily_notes>
 ${excludeSection}
 
 <triage_history>
 ${triageHistorySummary || "（過去の履歴なし）"}
 </triage_history>
 
-<daily_notes>
-${dailyNoteContext || "（Daily Noteなし）"}
-</daily_notes>
-
 <inbox_items>
 ${itemsSummary}
 </inbox_items>
 
 <instructions>
-以下の3つを実行してください。
+ステップ1: ユーザー理解
+Daily Noteとメモリを読み、ユーザーが今週何に手を動かしているか把握する。userSummaryに書く。
 
-1. Daily Noteとメモリから、ユーザーの現在の状況・関心・進行中の作業を把握し、userSummaryとして出力する
+ステップ2: メモリ更新
+以下の4セクション構成で出力する。前回のメモリに新しく読み取れた情報をマージし、古い情報は上書きする。
+## 今のフォーカス
+今週取り組んでいる具体的な作業。1-2行。
+## 技術スタック
+使っている言語・フレームワーク・ツール。
+## 追っているテーマ
+3-5個。具体的に。
+## 今は追わないもの
+興味はあるが今は手を出さないトピック。
 
-2. secretaryMemoryを更新する。必ず以下の4セクション構成で出力すること:
-   ## 今のフォーカス（今週取り組んでいる具体的な作業。1-2行）
-   ## 技術スタック（使っている言語・フレームワーク・ツール）
-   ## 追っているテーマ（3-5個。具体的に）
-   ## 今は追わないもの（興味はあるが今は優先しないトピック）
-   新しく読み取れた情報があればマージし、古くなった情報は更新する
+ステップ3: トリアージ
+各アイテムをhigh/lowに分類する。
 
-3. 各Inboxアイテムについて、このユーザーに関係あるかをhigh/lowで判定する
-   highにできるのは最大でも全体の3割まで。10件あればhighは最大3件、30件なら最大9件。
-   highの基準: 今まさに取り組んでいる作業に直接使える具体的な情報がある
-   lowの基準: 良い記事でも今の具体的な作業に直結しない。「いつか役立つ」はlow
+highの条件（すべて満たすこと）:
+- ユーザーが今週やっている作業に直接使える
+- 読んだ後に具体的なアクションが取れる
+- highは全体の3割以下に収める
+
+以下は必ずlow:
+- 「知っておくと良い」程度の情報
+- ユーザーの技術スタックと無関係
+- 今の作業でなく将来役立ちそうなもの
 </instructions>
 
 <examples>
-<example>
-ユーザー: Obsidianプラグインを開発中のTypeScriptエンジニア
-アイテム: 「React Server Componentsの深掘り」
+<example_high>
+ユーザーの状況: ObsidianプラグインをTypeScriptで開発中。esbuildでビルドしている。
+アイテム: 「esbuild 0.25の破壊的変更まとめ」
 判定: high
-理由: Reactを使っておりServer Componentsの知識が直接活きる
+理由: 今使っているesbuildのメジャーアップデート。ビルド設定の変更が必要か確認できる。
+</example_high>
 
-アイテム: 「Kubernetes 1.32のリリースノート」
+<example_low>
+ユーザーの状況: ObsidianプラグインをTypeScriptで開発中。
+アイテム: 「TypeScript 5.8の新機能まとめ」
 判定: low
-理由: インフラ運用は現在のスコープ外
-</example>
+理由: TypeScriptは使っているが、新機能を今の作業に適用する具体的な場面がない。
+</example_low>
+
+<example_low_borderline>
+ユーザーの状況: ObsidianプラグインをTypeScriptで開発中。Gemini APIを使っている。
+アイテム: 「LLMプロンプトエンジニアリング最新テクニック10選」
+判定: low
+理由: 関連はあるが、汎用的なテクニック集で今の実装に直接使える情報かわからない。
+</example_low_borderline>
 </examples>`;
 
     return this.client.generateStructured<TriageResult>(

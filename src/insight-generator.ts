@@ -1,29 +1,22 @@
 import { GeminiClient } from "./gemini-client";
-import { InboxItem, DigestEntry } from "./types";
+import { InboxItem, DigestEntry, TriageItem } from "./types";
 
-const INSIGHT_SYSTEM_INSTRUCTION = `あなたはユーザー専属の情報秘書です。
+const INSIGHT_SYSTEM_INSTRUCTION = `ユーザー専属の情報秘書。同僚に口頭で伝えるようなトーンで書く。
 
-出力ルール:
-- insightは1-2文。「あなたは○○に関心があります」のような前置きは書くな。記事の何がユーザーの今の作業にどう刺さるかだけ書け
-- actionは1文。「検討してください」「活用してください」は禁止。「○○を試す」「○○に適用する」のように具体的な動詞で終わらせろ
-- 記事の要約は書くな。ユーザーは記事を自分で読める。秘書の仕事は「なぜ今読むべきか」と「読んだ後に何をすべきか」だけ伝えること
-- 冗長な敬語は使うな。簡潔に、同僚に話すように書け`;
+書き方:
+- 記事の要約はしない。ユーザーは自分で読む
+- 「なぜ今か」と「読んだ後に何をするか」だけ伝える
+- 敬語は使わない。体言止めや命令形でいい`;
 
 const INSIGHT_SCHEMA = {
   type: "ARRAY",
   items: {
     type: "OBJECT",
     properties: {
-      title: { type: "STRING", description: "アイテムのタイトル（短く）" },
-      insight: {
-        type: "STRING",
-        description: "1-2文。なぜ今の作業に刺さるか。前置き不要、核心だけ",
-      },
-      action: {
-        type: "STRING",
-        description: "1文。読んだ後に何をすべきか。具体的な動詞で終わる",
-      },
-      sourceUrl: { type: "STRING", description: "元記事のURL（あれば）" },
+      title: { type: "STRING", description: "アイテムのタイトル" },
+      insight: { type: "STRING", description: "なぜ今読むべきか" },
+      action: { type: "STRING", description: "読んだ後にやること" },
+      sourceUrl: { type: "STRING", description: "元記事のURL" },
     },
     required: ["title", "insight", "action"],
   },
@@ -35,16 +28,27 @@ export class InsightGenerator {
   async generate(
     items: InboxItem[],
     memory: string,
-    userSummary: string
+    userSummary: string,
+    triageItems: TriageItem[],
+    dailyContext: string,
+    userProfile: string
   ): Promise<DigestEntry[]> {
+    const triageReasonMap = new Map(
+      triageItems.filter((i) => i.category === "high").map((i) => [i.title, i.reason])
+    );
+
     const itemsBlock = items
-      .map(
-        (item) =>
-          `<item>\nタイトル: ${item.title}\nURL: ${item.frontmatter.url ?? "なし"}\nタグ: ${(item.frontmatter.tags ?? []).join(", ")}\n\n${item.body}\n</item>`
-      )
+      .map((item) => {
+        const reason = triageReasonMap.get(item.title) ?? "";
+        return `<item>\nタイトル: ${item.title}\nURL: ${item.frontmatter.url ?? "なし"}\nタグ: ${(item.frontmatter.tags ?? []).join(", ")}\nトリアージ理由: ${reason}\n\n${item.body}\n</item>`;
+      })
       .join("\n\n");
 
-    const prompt = `<secretary_memory>
+    const prompt = `<user_profile>
+${userProfile || "（未設定）"}
+</user_profile>
+
+<secretary_memory>
 ${memory}
 </secretary_memory>
 
@@ -52,27 +56,50 @@ ${memory}
 ${userSummary}
 </user_summary>
 
+<daily_notes>
+${dailyContext || "（Daily Noteなし）"}
+</daily_notes>
+
 <selected_items>
 ${itemsBlock}
 </selected_items>
 
+<instructions>
+各アイテムにinsightとactionを書く。
+
+insightのルール:
+- 1-2文。ユーザーの今の作業と記事の接点だけ書く
+- 「この記事は〜」「あなたは〜に関心が〜」で始めない
+- トリアージ理由を手がかりに、具体的な接点を掘り下げる
+
+actionのルール:
+- 1文。読んだ後の具体的な行動。動詞で終わる
+- 「検討する」「活用する」「参考にする」は使わない。もっと具体的に
+</instructions>
+
 <examples>
-<example>
+<example_bad>
 アイテム: Claude Code 4.6のスキル機能
-insight: 今のinbox-secretaryのmain.tsがコマンド追加のたびに肥大化する問題を、スキルベースの動的ロード設計で解決できる。
-action: main.tsのaddCommand部分をスキル単位のモジュールに分離する。
-</example>
-<example>
+insight: この記事はClaude Codeの新しいスキル機能について解説しており、あなたのプラグイン開発に活用できる可能性があります。
+action: スキル機能の導入を検討してください。
+</example_bad>
+<example_good>
+アイテム: Claude Code 4.6のスキル機能
+insight: main.tsのaddCommand部分が肥大化している問題に、スキルベースの動的ロード設計が使える。
+action: main.tsのコマンド登録をスキル単位のモジュールに分離する。
+</example_good>
+
+<example_bad>
+アイテム: Ruby 3.4のパターンマッチング改善
+insight: Ruby 3.4のパターンマッチングが改善され、あなたのRailsプロジェクトのコード品質向上に貢献できるでしょう。
+action: パターンマッチングの活用を検討してみてください。
+</example_bad>
+<example_good>
 アイテム: Ruby 3.4のパターンマッチング改善
 insight: 仕事のRailsプロジェクトで条件分岐が複雑になっているコントローラに、in演算子のパターンマッチが効く。
 action: 複雑なcase文がある箇所をパターンマッチで書き直して可読性を比較する。
-</example>
-</examples>
-
-<instructions>
-各アイテムについて、insightとactionを書け。
-insightは「なぜ今読むべきか」、actionは「読んだ後に何をすべきか」。それ以外は書くな。
-</instructions>`;
+</example_good>
+</examples>`;
 
     return this.client.generateStructured<DigestEntry[]>(
       INSIGHT_SYSTEM_INSTRUCTION,
