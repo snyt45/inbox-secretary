@@ -20,7 +20,7 @@ export interface InboxSecretarySettings {
 export const DEFAULT_SETTINGS: InboxSecretarySettings = {
   inboxFolder: "Inbox",
   dailyNoteFolder: "Daily",
-  digestOutputFolder: "Inbox",
+  digestOutputFolder: "Inbox/Digest",
   geminiApiKey: "",
   geminiModel: "gemini-2.5-flash",
   dailyNoteDays: 14,
