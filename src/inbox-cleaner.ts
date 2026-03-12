@@ -1,6 +1,5 @@
-import { App, TFile } from "obsidian";
+import { App, TFile, TFolder } from "obsidian";
 import { InboxItem } from "./types";
-import { ensureFolder } from "./utils";
 
 export class InboxCleaner {
   constructor(private app: App) {}
@@ -13,7 +12,9 @@ export class InboxCleaner {
   ): Promise<void> {
     if (mode === "keep") return;
     if (mode === "archive") {
-      await ensureFolder(this.app, archiveFolder);
+      if (!(this.app.vault.getAbstractFileByPath(archiveFolder) instanceof TFolder)) {
+        await this.app.vault.createFolder(archiveFolder);
+      }
     }
 
     for (let i = 0; i < items.length; i++) {

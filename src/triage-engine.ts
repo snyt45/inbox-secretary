@@ -1,5 +1,5 @@
 import { GeminiClient } from "./gemini-client";
-import { InboxItem, TriageResult, TriageLog, SecretaryMemory } from "./types";
+import { InboxItem, TriageResult } from "./types";
 
 const TRIAGE_SYSTEM_INSTRUCTION = `あなたはユーザー専属の情報秘書。週に数回、ユーザーのInboxを整理して本当に今必要な情報だけを選り分ける。
 
@@ -14,10 +14,6 @@ const TRIAGE_SCHEMA = {
     userSummary: {
       type: "STRING",
       description: "ユーザーの現在の状況と今週の作業内容",
-    },
-    updatedMemory: {
-      type: "STRING",
-      description: "4セクション構成のメモリ全文",
     },
     items: {
       type: "ARRAY",
@@ -36,7 +32,7 @@ const TRIAGE_SCHEMA = {
       },
     },
   },
-  required: ["userSummary", "updatedMemory", "items"],
+  required: ["userSummary", "items"],
 };
 
 export class TriageEngine {
@@ -44,11 +40,7 @@ export class TriageEngine {
 
   async run(
     items: InboxItem[],
-    dailyNoteContext: string,
-    userProfile: string,
-    memory: SecretaryMemory,
-    triageLogs: TriageLog[],
-    excludeTopics: string
+    userProfile: string
   ): Promise<TriageResult> {
     const itemsSummary = items
       .map(
@@ -57,28 +49,9 @@ export class TriageEngine {
       )
       .join("\n\n");
 
-    const triageHistorySummary = this.formatTriageLogs(triageLogs);
-
-    const excludeSection = excludeTopics.trim()
-      ? `\n<exclude_topics>\n以下のトピックに該当するアイテムは必ずlowにすること:\n${excludeTopics}\n</exclude_topics>\n`
-      : "";
-
     const prompt = `<user_profile>
 ${userProfile || "（未設定）"}
 </user_profile>
-
-<secretary_memory>
-${memory.content || "（初回実行。以下の4セクションで構築すること: ## 今のフォーカス / ## 技術スタック / ## 追っているテーマ / ## 今は追わないもの）"}
-</secretary_memory>
-
-<daily_notes>
-${dailyNoteContext || "（Daily Noteなし）"}
-</daily_notes>
-${excludeSection}
-
-<triage_history>
-${triageHistorySummary || "（過去の履歴なし）"}
-</triage_history>
 
 <inbox_items>
 ${itemsSummary}
@@ -86,20 +59,9 @@ ${itemsSummary}
 
 <instructions>
 ステップ1: ユーザー理解
-Daily Noteとメモリを読み、ユーザーが今週何に手を動かしているか把握する。userSummaryに書く。
+プロフィールを読み、ユーザーが今週何に手を動かしているか把握する。userSummaryに書く。
 
-ステップ2: メモリ更新
-以下の4セクション構成で出力する。前回のメモリに新しく読み取れた情報をマージし、古い情報は上書きする。
-## 今のフォーカス
-今週取り組んでいる具体的な作業。1-2行。
-## 技術スタック
-使っている言語・フレームワーク・ツール。
-## 追っているテーマ
-3-5個。具体的に。
-## 今は追わないもの
-興味はあるが今は手を出さないトピック。
-
-ステップ3: トリアージ
+ステップ2: トリアージ
 各アイテムをhigh/lowに分類する。
 
 highの条件（すべて満たすこと）:
@@ -141,16 +103,5 @@ highの条件（すべて満たすこと）:
       prompt,
       TRIAGE_SCHEMA
     );
-  }
-
-  private formatTriageLogs(logs: TriageLog[]): string {
-    if (logs.length === 0) return "";
-    return logs
-      .map((log) => {
-        const highs = log.items.filter((i) => i.category === "high").map((i) => i.title);
-        const lows = log.items.filter((i) => i.category === "low").map((i) => i.title);
-        return `${log.date}: high=[${highs.join(", ")}] low=[${lows.join(", ")}]`;
-      })
-      .join("\n");
   }
 }

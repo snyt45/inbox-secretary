@@ -15,7 +15,6 @@ export interface InboxItem {
 
 export interface TriageResult {
   userSummary: string;
-  updatedMemory: string;
   items: TriageItem[];
 }
 
@@ -30,19 +29,4 @@ export interface DigestEntry {
   insight: string;
   action: string;
   sourceUrl?: string;
-}
-
-export interface SecretaryMemory {
-  content: string;
-  lastUpdated: string;
-}
-
-export interface TriageLog {
-  date: string;
-  items: {
-    title: string;
-    tags: string[];
-    category: "high" | "low";
-    reason: string;
-  }[];
 }

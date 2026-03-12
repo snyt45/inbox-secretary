@@ -16,7 +16,7 @@ const INSIGHT_SCHEMA = {
       title: { type: "STRING", description: "アイテムのタイトル" },
       insight: { type: "STRING", description: "なぜ今読むべきか" },
       action: { type: "STRING", description: "読んだ後にやること" },
-      sourceUrl: { type: "STRING", description: "元記事のURL" },
+      sourceUrl: { type: "STRING", description: "SourceのURL" },
     },
     required: ["title", "insight", "action"],
   },
@@ -27,11 +27,9 @@ export class InsightGenerator {
 
   async generate(
     items: InboxItem[],
-    memory: string,
+    userProfile: string,
     userSummary: string,
-    triageItems: TriageItem[],
-    dailyContext: string,
-    userProfile: string
+    triageItems: TriageItem[]
   ): Promise<DigestEntry[]> {
     const triageReasonMap = new Map(
       triageItems.filter((i) => i.category === "high").map((i) => [i.title, i.reason])
@@ -48,17 +46,9 @@ export class InsightGenerator {
 ${userProfile || "（未設定）"}
 </user_profile>
 
-<secretary_memory>
-${memory}
-</secretary_memory>
-
 <user_summary>
 ${userSummary}
 </user_summary>
-
-<daily_notes>
-${dailyContext || "（Daily Noteなし）"}
-</daily_notes>
 
 <selected_items>
 ${itemsBlock}

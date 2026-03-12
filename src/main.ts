@@ -5,14 +5,12 @@ import {
   InboxSecretarySettingTab,
 } from "./settings";
 import { InboxReader } from "./inbox-reader";
-import { DailyNoteReader } from "./daily-note-reader";
 import { GeminiClient } from "./gemini-client";
 import { TriageEngine } from "./triage-engine";
 import { InsightGenerator } from "./insight-generator";
 import { DigestWriter, DigestWriteParams } from "./digest-writer";
 import { InboxCleaner } from "./inbox-cleaner";
-import { TriageLog } from "./types";
-import { digestPath, legacyDigestPath, MAX_TRIAGE_LOGS } from "./constants";
+import { digestPath, legacyDigestPath } from "./constants";
 
 class ConfirmModal extends Modal {
   private resolved = false;
@@ -52,13 +50,13 @@ export default class InboxSecretaryPlugin extends Plugin {
     await this.loadSettings();
     this.addSettingTab(new InboxSecretarySettingTab(this.app, this));
 
-    this.addRibbonIcon("inbox", "デイリーダイジェスト生成", () => {
+    this.addRibbonIcon("inbox", "ダイジェスト生成", () => {
       this.generateDigest();
     });
 
     this.addCommand({
       id: "generate-daily-digest",
-      name: "デイリーダイジェスト生成",
+      name: "ダイジェスト生成",
       callback: () => this.generateDigest(),
     });
   }
@@ -89,8 +87,7 @@ export default class InboxSecretaryPlugin extends Plugin {
     const notice = new Notice("ダイジェスト生成中...", 0);
 
     try {
-      // [1/7] Inbox読み込み
-      notice.setMessage("[1/7] Inbox読み込み中...");
+      // Inbox読み込み
       const inboxReader = new InboxReader(this.app);
       const items = await inboxReader.readAll(this.settings.inboxFolder);
 
@@ -100,82 +97,34 @@ export default class InboxSecretaryPlugin extends Plugin {
         return;
       }
 
-      // [2/7] Daily Note読み込み
-      notice.setMessage(`[2/7] Daily Note読み込み中...（${this.settings.dailyNoteDays}日分）`);
-      const dailyNoteReader = new DailyNoteReader(this.app);
-      const { content: dailyContext, fileCount: dailyNoteCount } = await dailyNoteReader.readRecent(
-        this.settings.dailyNoteFolder,
-        this.settings.dailyNoteDays
-      );
-
-      // [3/7] メモリ読み込み
-      notice.setMessage("[3/7] メモリ・トリアージ履歴を読み込み中...");
-      const { memory, triageLogs } = this.settings;
-
-      // [4/7] Phase 1: トリアージ
-      notice.setMessage(`[4/7] トリアージ中...（${items.length}件を選別）`);
+      // トリアージ
+      notice.setMessage(`分析中...（${items.length}件）`);
       const client = new GeminiClient(this.settings.geminiApiKey, this.settings.geminiModel);
       const triageEngine = new TriageEngine(client);
-      const triageResult = await triageEngine.run(
-        items,
-        dailyContext,
-        this.settings.userProfile,
-        memory,
-        triageLogs,
-        this.settings.excludeTopics
-      );
+      const triageResult = await triageEngine.run(items, this.settings.userProfile);
 
-      // メモリ更新
-      this.settings.memory = {
-        content: triageResult.updatedMemory,
-        lastUpdated: new Date().toISOString().slice(0, 10),
-      };
-
-      // トリアージログ保存
-      const newLog: TriageLog = {
-        date: today,
-        items: triageResult.items.map((ti) => ({
-          title: ti.title,
-          tags: items.find((item) => item.title === ti.title)?.frontmatter.tags ?? [],
-          category: ti.category,
-          reason: ti.reason,
-        })),
-      };
-      this.settings.triageLogs = [...triageLogs, newLog].slice(-MAX_TRIAGE_LOGS);
-      await this.saveSettings();
-
-      // [5/7] トリアージ結果通知
       const highItems = triageResult.items.filter((i) => i.category === "high");
-      const lowCount = triageResult.items.filter((i) => i.category === "low").length;
-      notice.setMessage(`[5/7] トリアージ完了: ${highItems.length}件をピックアップ / ${lowCount}件を除外`);
 
-      // highアイテムがない場合
       if (highItems.length === 0) {
         notice.hide();
         new Notice("今回ピックアップするアイテムはありませんでした");
         return;
       }
 
-      // highのInboxItemを抽出
+      // 深掘り
       const highTitles = new Set(highItems.map((i) => i.title));
       const selectedItems = items.filter((item) => highTitles.has(item.title));
 
-      // 少し間を置いてユーザーが数字を認識できるようにする
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // [6/7] Phase 2: 深掘り提案
-      notice.setMessage(`[6/7] ピックアップした記事の深掘り中...（${selectedItems.length}件）`);
+      notice.setMessage(`深掘り中...（${selectedItems.length}件ピックアップ）`);
       const insightGenerator = new InsightGenerator(client);
       const rawEntries = await insightGenerator.generate(
         selectedItems,
-        triageResult.updatedMemory,
+        this.settings.userProfile,
         triageResult.userSummary,
-        triageResult.items,
-        dailyContext,
-        this.settings.userProfile
+        triageResult.items
       );
 
-      // LLMに頼らず元データからURLをマッピング
+      // 元データからURLをマッピング
       const entries = rawEntries.map((entry) => {
         const original = selectedItems.find((item) => item.title === entry.title);
         return {
@@ -184,8 +133,7 @@ export default class InboxSecretaryPlugin extends Plugin {
         };
       });
 
-      // [7/7] 書き出し + Inbox整理
-      notice.setMessage("[7/7] ダイジェストを書き出し中...");
+      // 書き出し
       const writer = new DigestWriter(this.app);
       const writeParams: DigestWriteParams = {
         outputFolder: this.settings.digestOutputFolder,
@@ -194,26 +142,22 @@ export default class InboxSecretaryPlugin extends Plugin {
         entries,
         triageItems: triageResult.items,
         totalCount: items.length,
-        dailyNoteDays: this.settings.dailyNoteDays,
-        dailyNoteCount,
-        memoryExists: !!memory.content,
-        triageLogCount: triageLogs.length,
-        model: this.settings.geminiModel,
       };
       const path = await writer.write(writeParams);
 
+      // Inbox整理
       const cleaner = new InboxCleaner(this.app);
       await cleaner.cleanup(
         items,
         this.settings.cleanupMode,
         this.settings.archiveFolder,
         (current, total, name) => {
-          notice.setMessage(`[7/7] Inboxを整理中...（${current}/${total}）${name}`);
+          notice.setMessage(`整理中...（${current}/${total}）${name}`);
         }
       );
 
       notice.hide();
-      new Notice(`ダイジェスト生成完了（${entries.length}件ピックアップ / ${items.length}件中）: ${path}`);
+      new Notice(`完了（${entries.length}件ピックアップ / ${items.length}件中）: ${path}`);
     } catch (error) {
       console.error("Inbox Secretary error:", error);
       notice.hide();
