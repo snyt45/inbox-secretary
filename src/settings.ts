@@ -18,7 +18,7 @@ export const DEFAULT_SETTINGS: InboxSecretarySettings = {
   geminiModel: "gemini-2.5-flash",
   userProfile: "",
   cleanupMode: "delete",
-  archiveFolder: "Archive",
+  archiveFolder: "Inbox/Archive",
 };
 
 export class InboxSecretarySettingTab extends PluginSettingTab {
@@ -33,7 +33,7 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h3", { text: "基本設定" });
+    containerEl.createEl("h3", { text: "API設定" });
 
     new Setting(containerEl)
       .setName("Gemini APIキー")
@@ -49,6 +49,21 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Geminiモデル")
+      .setDesc("使用するGeminiモデル名")
+      .addText((text) =>
+        text
+          .setPlaceholder("gemini-2.5-flash")
+          .setValue(this.plugin.settings.geminiModel)
+          .onChange(async (value) => {
+            this.plugin.settings.geminiModel = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    containerEl.createEl("h3", { text: "基本設定" });
+
+    new Setting(containerEl)
       .setName("ユーザープロフィール")
       .setDesc("職種・スキル・今やっていることをLLMに伝える。具体的なほどトリアージ精度が上がる")
       .addTextArea((text) => {
@@ -62,8 +77,6 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
-
-    containerEl.createEl("h3", { text: "詳細設定" });
 
     new Setting(containerEl)
       .setName("Inboxフォルダ")
@@ -92,19 +105,6 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Geminiモデル")
-      .setDesc("使用するGeminiモデル名")
-      .addText((text) =>
-        text
-          .setPlaceholder("gemini-2.5-flash")
-          .setValue(this.plugin.settings.geminiModel)
-          .onChange(async (value) => {
-            this.plugin.settings.geminiModel = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
       .setName("消化済みアイテムの処理")
       .setDesc("ダイジェスト生成後の元ノートの扱い")
       .addDropdown((dropdown) =>
@@ -125,7 +125,7 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
       .setDesc("Archive移動時の保存先")
       .addText((text) =>
         text
-          .setPlaceholder("Archive")
+          .setPlaceholder("Inbox/Archive")
           .setValue(this.plugin.settings.archiveFolder)
           .onChange(async (value) => {
             this.plugin.settings.archiveFolder = value;
