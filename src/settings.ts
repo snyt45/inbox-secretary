@@ -33,50 +33,7 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h3", { text: "API設定" });
-
-    new Setting(containerEl)
-      .setName("Gemini APIキー")
-      .setDesc("Google AI StudioでAPIキーを取得")
-      .addText((text) =>
-        text
-          .setPlaceholder("AIza...")
-          .setValue(this.plugin.settings.geminiApiKey)
-          .onChange(async (value) => {
-            this.plugin.settings.geminiApiKey = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("Geminiモデル")
-      .setDesc("使用するGeminiモデル名")
-      .addText((text) =>
-        text
-          .setPlaceholder("gemini-2.5-flash")
-          .setValue(this.plugin.settings.geminiModel)
-          .onChange(async (value) => {
-            this.plugin.settings.geminiModel = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
     containerEl.createEl("h3", { text: "基本設定" });
-
-    new Setting(containerEl)
-      .setName("ユーザープロフィール")
-      .setDesc("職種・スキル・今やっていることをLLMに伝える。具体的なほどトリアージ精度が上がる")
-      .addTextArea((text) => {
-        text.inputEl.rows = 8;
-        text.inputEl.style.width = "100%";
-        text
-          .setPlaceholder("例: フルスタックエンジニア。TypeScript, React, Rubyが主な技術スタック。今週はObsidianプラグインのプロンプト改善に集中している。AI動画・収益化系の記事は興味なし。")
-          .setValue(this.plugin.settings.userProfile)
-          .onChange(async (value) => {
-            this.plugin.settings.userProfile = value;
-            await this.plugin.saveSettings();
-          });
-      });
 
     new Setting(containerEl)
       .setName("Inboxフォルダ")
@@ -105,6 +62,19 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Archiveフォルダ")
+      .setDesc("Archive移動時の保存先")
+      .addText((text) =>
+        text
+          .setPlaceholder("Inbox/Archive")
+          .setValue(this.plugin.settings.archiveFolder)
+          .onChange(async (value) => {
+            this.plugin.settings.archiveFolder = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
       .setName("消化済みアイテムの処理")
       .setDesc("ダイジェスト生成後の元ノートの扱い")
       .addDropdown((dropdown) =>
@@ -121,14 +91,44 @@ export class InboxSecretarySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Archiveフォルダ")
-      .setDesc("Archive移動時の保存先")
+      .setName("ユーザープロフィール")
+      .setDesc("職種・スキル・今やっていることをLLMに伝える。具体的なほどトリアージ精度が上がる")
+      .addTextArea((text) => {
+        text.inputEl.rows = 8;
+        text.inputEl.style.width = "100%";
+        text
+          .setPlaceholder("例: フルスタックエンジニア。TypeScript, React, Rubyが主な技術スタック。今週はObsidianプラグインのプロンプト改善に集中している。AI動画・収益化系の記事は興味なし。")
+          .setValue(this.plugin.settings.userProfile)
+          .onChange(async (value) => {
+            this.plugin.settings.userProfile = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    containerEl.createEl("h3", { text: "API設定" });
+
+    new Setting(containerEl)
+      .setName("Gemini APIキー")
+      .setDesc("Google AI StudioでAPIキーを取得")
       .addText((text) =>
         text
-          .setPlaceholder("Inbox/Archive")
-          .setValue(this.plugin.settings.archiveFolder)
+          .setPlaceholder("AIza...")
+          .setValue(this.plugin.settings.geminiApiKey)
           .onChange(async (value) => {
-            this.plugin.settings.archiveFolder = value;
+            this.plugin.settings.geminiApiKey = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Geminiモデル")
+      .setDesc("使用するGeminiモデル名")
+      .addText((text) =>
+        text
+          .setPlaceholder("gemini-2.5-flash")
+          .setValue(this.plugin.settings.geminiModel)
+          .onChange(async (value) => {
+            this.plugin.settings.geminiModel = value;
             await this.plugin.saveSettings();
           })
       );
